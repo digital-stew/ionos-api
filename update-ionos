@@ -1,0 +1,23 @@
+#!/bin/bash
+
+api_key=""
+ionos_id=""
+at_record=""
+www_record=""
+
+tmpfile_location="/run/current-ip"
+logfile_location="/var/log/dns-update"
+report_email=""
+
+cd $(dirname $0)
+ip_now=`./upnp-ip-address`
+
+	if [ "$ip_now" != "`cat $tmpfile_location`" ]
+	then
+	date=`date +"%d/%m/%y %H:%M"`
+	echo $ip_now > $tmpfile_location
+	curl -s -X PUT "https://api.hosting.ionos.com/dns/v1/zones/$ionos_id/records/$at_record" -H "X-API-Key: $api_key" -H  "Content-Type: application/json" -d "{\"disabled\":false,\"content\":\"$ip_now\",\"prio\":0}" &>/dev/null
+	curl -s -X PUT "https://api.hosting.ionos.com/dns/v1/zones/$ionos_id/records/$www_record" -H "X-API-Key: $api_key" -H  "Content-Type: application/json" -d "{\"disabled\":false,\"content\":\"$ip_now\",\"prio\":0}" &>/dev/null
+	echo "Auto update of DNS record for tux-systems changed to $ip_now " | mail -s "IP update" $report_email
+	echo "$date - $ip_now" >> $logfile_location
+	fi
